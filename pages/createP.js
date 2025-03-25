@@ -251,7 +251,8 @@ const ProformaInvoice = () => {
             height={50}
             className="h-12 object-contain"
           />
-        </div>
+        </div>     
+        
 
         {/* Navigation Links */}
         <div className="flex space-x-4">
