@@ -2,14 +2,41 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaSearch, FaUsers, FaUserPlus } from 'react-icons/fa';
+import toast from "react-hot-toast";
 
 export default function AddClient() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [observation, setObservation] = useState('');
+  const validateForm = () => {
+    if (!fullName.trim()) {
+      toast.error("Full Name is required");
+      return false;
+    }
+    if (!observation.trim()) {
+      toast.error("obs is required");
+      return false;
+    }
+    if (!phone.trim()) {
+      toast.error("Phone Number is required");
+      return false;
+    }
+    if (!/^\d+$/.test(phone)) {
+      toast.error("Phone Number must contain only digits");
+      return false;
+    }
+    return true;
+  };
+
+
+
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     const res = await fetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import jsPDF from "jspdf";
+import toast from "react-hot-toast";
+
 import autoTable from "jspdf-autotable"; // ✅ Import the plugin
 import { FaSearch, FaUsers, FaUserPlus } from "react-icons/fa";
 import Image from "next/image";
@@ -82,8 +84,53 @@ const ProformaInvoice = () => {
   const handleConditionChange = (field, value) => {
     setConditions({ ...conditions, [field]: value });
   };
+  const validateForm = () => {
+    let isValid = true;
+  
+    if (!date) {
+      toast.error("Date is required");
+      isValid = false;
+    }
+    if (!client.name) {
+      toast.error("Client name is required");
+      isValid = false;
+    }
+    if (!client.contact) {
+      toast.error("Client contact is required");
+      isValid = false;
+    }
+    if (!client.email) {
+      toast.error("Client email is required");
+      isValid = false;
+    }
+  
+    items.forEach((item, index) => {
+      if (!item.description) {
+        toast.error(`Item ${index + 1}: Description is required`);
+        isValid = false;
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        toast.error(`Item ${index + 1}: Quantity must be greater than 0`);
+        isValid = false;
+      }
+      if (!item.unitPrice || item.unitPrice <= 0) {
+        toast.error(`Item ${index + 1}: Unit price must be greater than 0`);
+        isValid = false;
+      }
+    });
+  
+    return isValid;
+  };
+
+
+
+
+
+
+
 
   const handleSubmit = async () => {
+    if (!validateForm()) return;
     try {
       const proformaDocument = {
         date,
@@ -237,6 +284,7 @@ const ProformaInvoice = () => {
   
     doc.save(`Proforma_Invoice_${client.name || "Unknown"}.pdf`);
   };
+  
   
 
   return (
