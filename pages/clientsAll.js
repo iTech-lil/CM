@@ -26,8 +26,11 @@ export default function ClientList() {
         <Link href="/clientsAll" className="btn btn-outline flex items-center">
           <FaUsers className="mr-2" /> Clients
         </Link>
-        <Link href="/" className="btn btn-primary flex items-center bg-[#E89A00]">
+        <Link href="/" className="btn btn-primary flex items-center ">
           <FaUserPlus className="mr-2" /> Add Client
+        </Link>
+        <Link href="/createP" className="btn btn-primary flex items-center bg-[#E89A00]">
+          <FaUserPlus className="mr-2" /> Create Proforma
         </Link>
       </div>
     </div>

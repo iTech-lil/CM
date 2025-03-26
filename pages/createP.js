@@ -519,30 +519,24 @@ const ProformaInvoice = () => {
         </p>
       </div>
 
-      <div className="flex justify-center mt-8 mb-10">
-        <button
-          onClick={handleSubmit}
-          className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
-        >
-          Save Proforma
-        </button>
-      </div>
-      <button
-        onClick={() =>
-          downloadPDF(
-            client,
-            items,
-            totalMontantHT,
-            TVA,
-            netAPayer,
-            conditions,
-            date
-          )
-        }
-        className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
-      >
-        Generate PDF
-      </button>
+      <div className="flex justify-center mt-8 mb-10 gap-4">
+  <button
+    onClick={handleSubmit}
+    className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
+  >
+    Save Proforma
+  </button>
+
+  <button
+    onClick={() =>
+      downloadPDF(client, items, totalMontantHT, TVA, netAPayer, conditions, date)
+    }
+    className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
+  >
+    Generate PDF
+  </button>
+</div>
+
     </div>
   );
 };
