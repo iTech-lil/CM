@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { FaSearch, FaUsers, FaUserPlus } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
+import { RiBillLine } from "react-icons/ri";
+
 export default function ClientList() {
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
@@ -30,7 +32,8 @@ export default function ClientList() {
           <FaUserPlus className="mr-2" /> Add Client
         </Link>
         <Link href="/createP" className="btn btn-primary flex items-center bg-[#E89A00]">
-          <FaUserPlus className="mr-2" /> Create Proforma
+          <RiBillLine 
+          className="mr-2" /> Create Proforma
         </Link>
       </div>
     </div>

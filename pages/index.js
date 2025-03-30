@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FaSearch, FaUsers, FaUserPlus } from 'react-icons/fa';
 import toast from "react-hot-toast";
+import { RiBillLine } from "react-icons/ri";
 
 export default function AddClient() {
   const [fullName, setFullName] = useState('');
@@ -71,7 +72,8 @@ export default function AddClient() {
           <FaUserPlus className="mr-2" /> Add Client
         </Link>
         <Link href="/createP" className="btn btn-primary flex items-center bg-[#E89A00]">
-          <FaUserPlus className="mr-2" /> Create Proforma
+          <RiBillLine 
+          className="mr-2" /> Create Proforma
         </Link>
       </div>
     </div>

@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import jsPDF from "jspdf";
 import toast from "react-hot-toast";
+import { RiBillLine } from "react-icons/ri";
+import { CiCirclePlus } from "react-icons/ci";
 
 import autoTable from "jspdf-autotable"; // ✅ Import the plugin
 import { FaSearch, FaUsers, FaUserPlus } from "react-icons/fa";
@@ -13,8 +15,9 @@ const ProformaInvoice = () => {
     contact: "",
     email: "",
   });
+  const [isSaved, setIsSaved] = useState(false); // Track if proforma is saved
 
-  const [counter, setCounter] = useState(1); // Starting number for counter
+  const [counter, setCounter] = useState(); // Starting number for counter
 
   const [items, setItems] = useState([
     {
@@ -40,6 +43,10 @@ const ProformaInvoice = () => {
     }
     setItems(updatedItems);
   };
+  useEffect(() => {
+    setDate(new Date().toISOString().split("T")[0]);
+  }, []);
+  
 
   const handleBlur = (index) => {
     const updatedItems = [...items];
@@ -86,7 +93,7 @@ const ProformaInvoice = () => {
   };
   const validateForm = () => {
     let isValid = true;
-  
+
     if (!date) {
       toast.error("Date is required");
       isValid = false;
@@ -103,7 +110,7 @@ const ProformaInvoice = () => {
       toast.error("Client email is required");
       isValid = false;
     }
-  
+
     items.forEach((item, index) => {
       if (!item.description) {
         toast.error(`Item ${index + 1}: Description is required`);
@@ -118,7 +125,7 @@ const ProformaInvoice = () => {
         isValid = false;
       }
     });
-  
+
     return isValid;
   };
 
@@ -129,7 +136,21 @@ const ProformaInvoice = () => {
 
 
 
-  const handleSubmit = async () => {
+    const fetchLastCounter = async () => {
+      try {
+        const res = await fetch("/api/getLastCounter");
+        const data = await res.json();
+        setCounter(data.counter + 1);
+        console.log(data.counter + 1); // Increment by 1
+      } catch (error) {
+        toast.error("Failed to fetch last proforma counter");
+      }
+    };
+
+ 
+
+  const handleSubmit = async (e) => {
+
     if (!validateForm()) return;
     try {
       const proformaDocument = {
@@ -156,14 +177,22 @@ const ProformaInvoice = () => {
 
       if (!response.ok) {
         throw new Error("Failed to save proforma");
+        
       }
+
 
       const result = await response.json();
       console.log("Proforma saved:", result);
-      alert("Proforma saved successfully!");
-
-      // Optionally increment counter after successful save
+      toast.success("Proforma saved successfully!");
+      setIsSaved(true); // Enable PDF button
+      await fetch('/api/getLastCounter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newCounter: counter + 1 }),
+      });
+  
       setCounter((prev) => prev + 1);
+      // Optionally increment counter after successful save
     } catch (error) {
       console.error("Error saving proforma:", error);
       alert("Error saving proforma: " + error.message);
@@ -175,20 +204,20 @@ const ProformaInvoice = () => {
       orientation: "portrait",
       unit: "mm",
       format: "a4",
-      compress: true
+      compress: true,
     });
-  
+
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
     const margin = 10;
-  
+
     const addHeader = (doc) => {
       doc.addImage("/NEW.png", "PNG", 0, 0, pageWidth, 50, "FAST", "NONE");
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("PROFORMA", pageWidth / 2, 60, { align: "center" });
+      doc.text(`PROFORMA 2025 / ${counter}`, pageWidth / 2, 60, { align: "center" });
     };
-  
+
     const addClientInfo = (doc) => {
       doc.setFontSize(10);
       doc.text(`Date: ${date || "N/A"}`, margin, 55);
@@ -196,7 +225,7 @@ const ProformaInvoice = () => {
       doc.text(`Contact: ${client.contact || "N/A"}`, margin, 65);
       doc.text(`Email: ${client.email || "N/A"}`, margin, 70);
     };
-  
+
     const tableColumn = ["#", "Designation", "Quantity", "PU HT", "Montant HT"];
     const tableRows = items.map((item, index) => [
       index + 1,
@@ -205,20 +234,20 @@ const ProformaInvoice = () => {
       `${parseFloat(item.unitPrice).toFixed(2)} DA`,
       `${parseFloat(item.montantHT).toFixed(2)} DA`,
     ]);
-  
+
     addHeader(doc);
     addClientInfo(doc);
-  
+
     // Force all items on one page by removing autoTable pagination
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 80,
       theme: "grid",
-      styles: { 
-        fontSize: 9, 
+      styles: {
+        fontSize: 9,
         cellPadding: 2,
-        overflow: 'linebreak' // This helps with long text
+        overflow: "linebreak", // This helps with long text
       },
       headStyles: { fillColor: [41, 128, 185], textColor: 255 },
       columnStyles: {
@@ -228,15 +257,14 @@ const ProformaInvoice = () => {
         3: { cellWidth: 30, halign: "right" },
         4: { cellWidth: 30, halign: "right" },
       },
-      pageBreak: 'avoid' // Crucial setting to prevent pagination
+      pageBreak: "avoid", // Crucial setting to prevent pagination
     });
-  
+
     const totalsData = [
       [`Total Montant HT:`, `${totalMontantHT} DA`],
       [`TVA (19%):`, `${TVA} DA`],
       [`Net à Payer:`, `${netAPayer} DA`],
     ];
-  
     autoTable(doc, {
       body: totalsData,
       startY: doc.lastAutoTable.finalY + 1,
@@ -248,13 +276,11 @@ const ProformaInvoice = () => {
       },
       tableWidth: 90,
       margin: { left: pageWidth - 75 },
-      pageBreak: 'avoid' // Prevent pagination for totals
+      pageBreak: "avoid", // Prevent pagination for totals
     });
-  
     let conditionsY = doc.lastAutoTable.finalY + 5;
     doc.setFontSize(10);
     doc.text("Conditions:", margin, conditionsY);
-  
     const conditionsList = [
       `Livraison: ${conditions.delivery}`,
       `Paiement: ${conditions.payment}`,
@@ -262,30 +288,33 @@ const ProformaInvoice = () => {
       `Service Après-Vente: ${conditions.afterSales}`,
       `Validité: ${conditions.validity}`,
     ];
-  
+
     conditionsList.forEach((condition, index) => {
       doc.text(condition, margin, conditionsY + 10 + index * 6);
     });
-  
+
     const logoWidth = 40;
     const logoHeight = 40;
     const logoX = pageWidth - logoWidth - margin;
     const logoY = pageHeight - logoHeight - 20;
-  
+
     try {
       doc.addImage("/sg.png", "PNG", logoX, logoY, logoWidth, logoHeight);
     } catch (error) {
       console.warn("Logo could not be added:", error);
     }
-  
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     // doc.text("SARL TAHRAOUI", logoX + logoWidth / 2, logoY + logoHeight - 10, { align: "center" });
-  
+
+    fetchLastCounter();
+
+
+
+
     doc.save(`Proforma_Invoice_${client.name || "Unknown"}.pdf`);
   };
-  
-  
 
   return (
     <div className="container mx-auto p-6  bg-white shadow-lg rounded-lg">
@@ -299,8 +328,7 @@ const ProformaInvoice = () => {
             height={50}
             className="h-12 object-contain"
           />
-        </div>     
-        
+        </div>
 
         {/* Navigation Links */}
         <div className="flex space-x-4">
@@ -317,7 +345,8 @@ const ProformaInvoice = () => {
             href="/createP"
             className="btn btn-primary flex items-center bg-[#E89A00]"
           >
-            <FaUserPlus className="mr-2" /> Create Proforma
+            <RiBillLine 
+            className="mr-2" /> Create Proforma
           </Link>
         </div>
       </div>
@@ -485,7 +514,7 @@ const ProformaInvoice = () => {
           </tbody>
         </table>
         <button onClick={addItem} className="mt-2 btn btn-primary">
-          Add Item
+        <CiCirclePlus size={25}/>
         </button>
       </div>
       <div className="mt-6 flex justify-end m-10">
@@ -568,23 +597,29 @@ const ProformaInvoice = () => {
       </div>
 
       <div className="flex justify-center mt-8 mb-10 gap-4">
-  <button
-    onClick={handleSubmit}
-    className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
-  >
-    Save Proforma
-  </button>
+        <button
+          onClick={handleSubmit}
+          className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
+        >
+          Save Proforma
+        </button>
 
-  <button
-    onClick={() =>
-      downloadPDF(client, items, totalMontantHT, TVA, netAPayer, conditions, date)
-    }
-    className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
-  >
-    Generate PDF
-  </button>
-</div>
-
+        <button
+        onClick={() => {
+          if (isSaved) {
+            downloadPDF(client, items, totalMontantHT, TVA, netAPayer, conditions, date);
+          } else {
+            toast.error("Please save the proforma first!");
+          }
+        }}
+        disabled={!isSaved} // Disable if proforma is not saved
+        className={`btn font-bold py-2 px-6 rounded-lg text-lg ${
+          isSaved ? "bg-[#E89A00] hover:bg-[#d18e00]" : "bg-gray-400 cursor-not-allowed"
+        }`}
+      >
+        Generate PDF
+      </button>
+      </div>
     </div>
   );
 };
