@@ -136,69 +136,79 @@ const ProformaInvoice = () => {
 
 
 
-    const fetchLastCounter = async () => {
-      try {
-        const res = await fetch("/api/getLastCounter");
-        const data = await res.json();
-        setCounter(data.counter + 1);
-        console.log(data.counter + 1); // Increment by 1
-      } catch (error) {
-        toast.error("Failed to fetch last proforma counter");
-      }
-    };
-{/* <h1>hh</h1> */}
- 
+   // Add this useEffect to fetch the counter when component mounts
+useEffect(() => {
+  fetchLastCounter();
+}, []);
 
-  const handleSubmit = async (e) => {
+// Modify the fetchLastCounter function
+const fetchLastCounter = async () => {
+  try {
+    const res = await fetch("/api/getLastCounter");
+    const data = await res.json();
+    setCounter(data.counter + 1);
+  } catch (error) {
+    console.error("Failed to fetch last proforma counter:", error);
+    toast.error("Failed to fetch last proforma counter");
+    // Set a default value if fetch fails
+    setCounter(1);
+  }
+};
 
-    if (!validateForm()) return;
-    try {
-      const proformaDocument = {
-        date,
-        client,
-        counter,
-        items,
-        totals: {
-          totalMontantHT,
-          TVA,
-          netAPayer,
-        },
-        conditions,
-        createdAt: new Date(),
-      };
-
-      const response = await fetch("/api/saveProforma", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(proformaDocument),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save proforma");
-        
-      }
-
-
-      const result = await response.json();
-      console.log("Proforma saved:", result);
-      toast.success("Proforma saved successfully!");
-      setIsSaved(true); // Enable PDF button
-      await fetch('/api/getLastCounter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newCounter: counter + 1 }),
-      });
+// Modify handleSubmit to return a success value
+const handleSubmit = async () => {
+  if (!validateForm()) return false;
   
-      setCounter((prev) => prev + 1);
-      // Optionally increment counter after successful save
-    } catch (error) {
-      console.error("Error saving proforma:", error);
-      alert("Error saving proforma: " + error.message);
-    }
-  };
+  try {
+    const proformaDocument = {
+      date,
+      client,
+      counter,
+      items,
+      totals: {
+        totalMontantHT,
+        TVA,
+        netAPayer,
+      },
+      conditions,
+      createdAt: new Date(),
+    };
 
+    const response = await fetch("/api/saveProforma", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(proformaDocument),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to save proforma");
+    }
+
+    const result = await response.json();
+    console.log("Proforma saved:", result);
+    toast.success("Proforma saved successfully!");
+    setIsSaved(true);
+    
+    // Update counter in database
+    const updateCounterResponse = await fetch('/api/updateCounter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ counter }),
+    });
+    
+    if (!updateCounterResponse.ok) {
+      console.warn("Counter update failed but proforma was saved");
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving proforma:", error);
+    toast.error("Error saving proforma: " + error.message);
+    return false;
+  }
+};
   const downloadPDF = () => {
     const doc = new jsPDF({
       orientation: "portrait",
@@ -212,7 +222,7 @@ const ProformaInvoice = () => {
     const margin = 10;
 
     const addHeader = (doc) => {
-      doc.addImage("/NEW.png", "PNG", 0, 0, pageWidth, 50, "FAST", "NONE");
+      doc.addImage("/NEW.png", "PNG", 0, 0, pageWidth, 55, "FAST", "NONE");
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text(`PROFORMA 2025 / ${counter}`, pageWidth / 2, 60, { align: "center" });
@@ -220,10 +230,13 @@ const ProformaInvoice = () => {
 
     const addClientInfo = (doc) => {
       doc.setFontSize(10);
-      doc.text(`Date: ${date || "N/A"}`, margin, 55);
       doc.text(`Client Name: ${client.name || "N/A"}`, margin, 60);
-      doc.text(`Contact: ${client.contact || "N/A"}`, margin, 65);
-      doc.text(`Email: ${client.email || "N/A"}`, margin, 70);
+  doc.text(`Contact: ${client.contact || "N/A"}`, margin, 65);
+  doc.text(`Email: ${client.email || "N/A"}`, margin, 70);
+
+  // Date on the right
+  const dateX = pageWidth - margin - 50; // Adjust width as needed
+  doc.text(`Biskra le : ${date || "N/A"}`, dateX, 60);
     };
 
     const tableColumn = ["#", "Designation", "Quantity", "PU HT", "Montant HT"];
@@ -597,29 +610,22 @@ const ProformaInvoice = () => {
       </div>
 
       <div className="flex justify-center mt-8 mb-10 gap-4">
-        <button
-          onClick={handleSubmit}
-          className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
-        >
-          Save Proforma
-        </button>
+  <button
+    onClick={async () => {
+      const success = await handleSubmit(); // make sure handleSubmit returns true/false
 
-        <button
-        onClick={() => {
-          if (isSaved) {
-            downloadPDF(client, items, totalMontantHT, TVA, netAPayer, conditions, date);
-          } else {
-            toast.error("Please save the proforma first!");
-          }
-        }}
-        disabled={!isSaved} // Disable if proforma is not saved
-        className={`btn font-bold py-2 px-6 rounded-lg text-lg ${
-          isSaved ? "bg-[#E89A00] hover:bg-[#d18e00]" : "bg-gray-400 cursor-not-allowed"
-        }`}
-      >
-        Generate PDF
-      </button>
-      </div>
+      if (success) {
+        downloadPDF(client, items, totalMontantHT, TVA, netAPayer, conditions, date);
+      } else {
+        toast.error("Failed to save proforma!");
+      }
+    }}
+    className="btn btn-primary bg-[#E89A00] hover:bg-[#d18e00] text-white font-bold py-2 px-6 rounded-lg text-lg"
+  >
+    Save & Generate PDF
+  </button>
+</div>
+
     </div>
   );
 };
